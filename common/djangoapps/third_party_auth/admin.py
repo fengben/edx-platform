@@ -60,7 +60,10 @@ class SAMLProviderConfigAdmin(KeyedConfigurationModelAdmin):
         queryset = super(SAMLProviderConfigAdmin, self).get_queryset(request).exclude(archived=True)
         return queryset
 
-    def delete_provider_configuration(self, request, queryset):
+    def archive_provider_configuration(self, request, queryset):
+        """
+        Archived the selected provider configurations.
+        """
         with transaction.atomic():
             for obj in queryset:
                 self.model.objects.filter(pk=obj.pk).update(archived=True)
@@ -81,15 +84,14 @@ class SAMLProviderConfigAdmin(KeyedConfigurationModelAdmin):
         """
         actions = super(SAMLProviderConfigAdmin, self).get_actions(request)
         action_delete = {
-            'delete_provider_configuration': (
-                SAMLProviderConfigAdmin.delete_provider_configuration,
-                'delete_provider_configuration',
+            'archive_provider_configuration': (
+                SAMLProviderConfigAdmin.archive_provider_configuration,
+                'archive_provider_configuration',
                 _('Delete the selected configuration')
             )
         }
         actions.update(action_delete)
         return actions
-
 
     def name_with_update_link(self, instance):
         """
