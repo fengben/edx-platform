@@ -23,7 +23,9 @@ from student.models import CourseEnrollment
 from util.views import ensure_valid_course_key
 from xmodule.modulestore.django import modulestore
 
+from course_modes.models import get_cosmetic_verified_display_price
 from lms.djangoapps.course_api.blocks.api import get_blocks
+from lms.djangoapps.commerce.utils import EcommerceService
 from lms.djangoapps.courseware.courses import get_course_with_access
 from lms.djangoapps.discussion.views import create_user_profile_context
 from lms.djangoapps.grades.course_grade_factory import CourseGradeFactory
@@ -66,7 +68,18 @@ class LearnerAnalyticsView(View):
         is_verified = CourseEnrollment.is_enrolled_as_verified(request.user, course_key)
         has_access = is_verified or request.user.is_staff
 
+        enrollment = CourseEnrollment.get_enrollment(request.user, course_key)
+
+        upgrade_price = None
+        upgrade_url = None
+
+        if enrollment and enrollment.upgrade_deadline:
+            upgrade_url = EcommerceService().upgrade_url(request.user, course_key)
+            upgrade_price = get_cosmetic_verified_display_price(course)
+
         context = {
+            'upgrade_price': upgrade_price,
+            'upgrade_link': upgrade_url,
             'course': course,
             'course_url': course_url,
             'disable_courseware_js': True,
@@ -79,9 +92,20 @@ class LearnerAnalyticsView(View):
         if (has_access):
             grading_policy = course.grading_policy
 
-            (grade_data, answered_percent) = self.get_grade_data(request.user, course_key, grading_policy['GRADE_CUTOFFS'])
+            (grade_data, answered_percent, percent_grade) = self.get_grade_data(request.user, course_key, grading_policy['GRADE_CUTOFFS'])
             schedule_data = self.get_assignments_with_due_date(request, course_key)
             (grade_data, schedule_data) = self.sort_grade_and_schedule_data(grade_data, schedule_data)
+
+            # TODO: LEARNER-3854: Fix hacked defaults with real error handling if implementing Learner Analytics.
+            try:
+                weekly_active_users = self.get_weekly_course_activity_count(course_key)
+                week_streak = self.consecutive_weeks_of_course_activity_for_user(
+                    request.user.username, course_key
+                )
+            except Exception as e:
+                logging.exception(e)
+                weekly_active_users = 134
+                week_streak = 1
 
             context.update({
                 'grading_policy': grading_policy,
@@ -90,10 +114,10 @@ class LearnerAnalyticsView(View):
                 'assignment_schedule': schedule_data,
                 'profile_image_urls': get_profile_image_urls_for_user(request.user, request),
                 'discussion_info': self.get_discussion_data(request, course_key),
-                'weekly_active_users': self.get_weekly_course_activity_count(course_key),
-                'week_streak': self.consecutive_weeks_of_course_activity_for_user(
-                    request.user.username, course_key
-                )
+                'passing_grade': math.ceil(100 * course.lowest_passing_grade),
+                'percent_grade': math.ceil(100 * percent_grade),
+                'weekly_active_users': weekly_active_users,
+                'week_streak': week_streak,
             })
 
         return render_to_response('learner_analytics/dashboard.html', context)
@@ -111,6 +135,7 @@ class LearnerAnalyticsView(View):
         grades = []
         total_earned = 0
         total_possible = 0
+        # answered_percent seems to be unused and it does not take into account assignment type weightings
         answered_percent = None
         for (location, subsection_grade) in course_grade.subsection_grades.iteritems():
             if subsection_grade.format is not None:
@@ -134,7 +159,7 @@ class LearnerAnalyticsView(View):
 
         if total_possible > 0:
             answered_percent = float(total_earned) / total_possible
-        return (grades, answered_percent)
+        return (grades, answered_percent, course_grade.percent)
 
     def sort_grade_and_schedule_data(self, grade_data, schedule_data):
         """

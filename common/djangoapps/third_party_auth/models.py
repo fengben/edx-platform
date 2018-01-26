@@ -436,6 +436,7 @@ class SAMLProviderConfig(ProviderConfig):
         null=True,
         blank=True,
     )
+    archived = models.BooleanField(default=False)
 
     def clean(self):
         """ Standardize and validate fields """

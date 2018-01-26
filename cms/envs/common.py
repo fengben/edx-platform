@@ -112,6 +112,7 @@ from lms.envs.common import (
     PASSWORD_RESET_SUPPORT_LINK,
     ACTIVATION_EMAIL_SUPPORT_LINK,
 
+    DEFAULT_COURSE_VISIBILITY_IN_CATALOG,
     DEFAULT_MOBILE_AVAILABLE,
 
     CONTACT_EMAIL,
@@ -281,6 +282,10 @@ FEATURES = {
 
     # Whether or not the dynamic EnrollmentTrackUserPartition should be registered.
     'ENABLE_ENROLLMENT_TRACK_USER_PARTITION': True,
+
+    # Whether to send an email for failed password reset attempts or not. This is mainly useful for notifying users
+    # that they don't have an account associated with email addresses they believe they've registered with.
+    'ENABLE_PASSWORD_RESET_FAILURE_EMAIL': False,
 
     # Whether archived courses (courses with end dates in the past) should be
     # shown in Studio in a separate list.
@@ -1123,6 +1128,9 @@ INSTALLED_APPS = [
 
     # Entitlements, used in openedx tests
     'entitlements',
+
+    # Asset management for mako templates
+    'pipeline_mako',
 ]
 
 
@@ -1331,7 +1339,7 @@ FILES_AND_UPLOAD_TYPE_FILTERS = {
         'text/csv',
         'text/pdf',
         'text/x-sh',
-        '\application/pdf\""',
+        '\"application/pdf\"',
     ],
     "Audio": ['audio/mpeg', 'audio/mp3', 'audio/x-wav', 'audio/ogg', 'audio/wav', 'audio/aac', 'audio/x-m4a',
               'audio/mp4', 'audio/x-ms-wma', ],

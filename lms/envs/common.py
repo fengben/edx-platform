@@ -421,6 +421,10 @@ FEATURES = {
 
     # Whether HTML XBlocks/XModules return HTML content with the Course Blocks API student_view_data
     'ENABLE_HTML_XBLOCK_STUDENT_VIEW_DATA': False,
+
+    # Whether to send an email for failed password reset attempts or not. This is mainly useful for notifying users
+    # that they don't have an account associated with email addresses they believe they've registered with.
+    'ENABLE_PASSWORD_RESET_FAILURE_EMAIL': False,
 }
 
 # Settings for the course reviews tool template and identification key, set either to None to disable course reviews
@@ -595,7 +599,10 @@ CONTEXT_PROCESSORS = [
 
     # Online contextual help
     'help_tokens.context_processor',
-    'openedx.core.djangoapps.site_configuration.context_processors.configuration_context'
+    'openedx.core.djangoapps.site_configuration.context_processors.configuration_context',
+
+    # Mobile App processor (Detects if request is from the mobile app)
+    'mobile_api.context_processor.is_from_mobile_app'
 ]
 
 # Django templating
@@ -2995,6 +3002,7 @@ COURSE_CATALOG_VISIBILITY_PERMISSION = 'see_exists'
 # visible. We default this to the legacy permission 'see_exists'.
 COURSE_ABOUT_VISIBILITY_PERMISSION = 'see_exists'
 
+DEFAULT_COURSE_VISIBILITY_IN_CATALOG = "both"
 DEFAULT_MOBILE_AVAILABLE = True
 
 # Enrollment API Cache Timeout

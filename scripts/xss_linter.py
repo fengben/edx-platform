@@ -314,7 +314,7 @@ class RuleViolation(object):
             found.
 
         """
-        pragma_match = re.search(r'xss-lint:\s*disable=([a-zA-Z,-]+)', string)
+        pragma_match = re.search(r'xss-lint:\s*disable=([a-zA-Z,\- ]+)', string)
         if pragma_match is None:
             return
         if scope_start_string:
@@ -324,7 +324,7 @@ class RuleViolation(object):
                 return
 
         for disabled_rule in pragma_match.group(1).split(','):
-            if disabled_rule == self.rule.rule_id:
+            if disabled_rule.strip() == self.rule.rule_id:
                 self.is_disabled = True
                 return
 
@@ -2272,6 +2272,9 @@ class MakoTemplateLinter(BaseLinter):
                     results.violations.append(ExpressionRuleViolation(
                         Rules.mako_unwanted_html_filter, expression
                     ))
+            elif filters == ['n', 'strip_all_tags_but_br']:
+                # {x | n,  strip_all_tags_but_br} is valid in html context
+                pass
             else:
                 results.violations.append(ExpressionRuleViolation(
                     Rules.mako_invalid_html_filter, expression
@@ -2380,6 +2383,8 @@ class MakoTemplateLinter(BaseLinter):
                 </script> |  # script tag end
                 <%static:require_module(_async)?.*?> |  # require js script tag start (optionally the _async version)
                 </%static:require_module(_async)?> | # require js script tag end (optionally the _async version)
+                <%static:require_page.*?> |  # require js script tag start
+                </%static:require_page> |  # require js script tag end
                 <%static:webpack.*?> |  # webpack script tag start
                 </%static:webpack> | # webpack script tag end
                 <%static:studiofrontend.*?> | # studiofrontend script tag start
